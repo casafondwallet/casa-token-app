@@ -35,6 +35,19 @@ export const formatAmount = (amount: string | number, decimals: number = 9): str
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(num)) return '0.00';
   
+  // Для больших чисел используем BigInt для точности
+  if (num > Number.MAX_SAFE_INTEGER) {
+    const bigNum = BigInt(Math.floor(num));
+    const divisor = BigInt(Math.pow(10, decimals));
+    const whole = bigNum / divisor;
+    const fraction = bigNum % divisor;
+    
+    const fractionStr = fraction.toString().padStart(decimals, '0');
+    const trimmedFraction = fractionStr.replace(/0+$/, '');
+    
+    return `${whole.toLocaleString('ru-RU')}${trimmedFraction ? '.' + trimmedFraction : ''}`;
+  }
+  
   const formatted = (num / Math.pow(10, decimals)).toFixed(6);
   return parseFloat(formatted).toLocaleString('ru-RU', {
     minimumFractionDigits: 2,

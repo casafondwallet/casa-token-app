@@ -19,6 +19,8 @@ REACT_APP_TON_NETWORK=mainnet
 REACT_APP_CASA_TOKEN_ADDRESS=EQBWK_VVEBJWiIQIIXOckUVw0HdF24buJiNiiR0dUHEe2xs4
 REACT_APP_API_URL=https://your-api.com
 REACT_APP_TON_CONNECT_MANIFEST_URL=https://wallet.casafond.org/tonconnect-manifest.json
+REACT_APP_TON_API_KEY=
+REACT_APP_COINGECKO_API_URL=https://api.coingecko.com/api/v3
 EOF
 
 # Обновляем TON Connect манифест

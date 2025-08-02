@@ -3,6 +3,7 @@ import { useTonConnectUI } from '@tonconnect/ui-react';
 import { WalletInfo, TokenBalance } from '../types';
 import { TON_TOKENS, formatAmount } from '../utils/tonUtils';
 import { MESSAGES } from '../constants';
+import { getAllBalances, getTonBalance, getJettonBalance } from '../utils/tonApi';
 
 export const useTonWallet = () => {
   const [tonConnectUI] = useTonConnectUI();
@@ -38,31 +39,58 @@ export const useTonWallet = () => {
     setError(null);
 
     try {
-      // Здесь будет реальный API вызов для получения балансов
-      // Пока используем моковые данные
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Получаем реальные балансы из блокчейна
+      const balances = await getAllBalances(account.address);
+      
+      const realBalances: TokenBalance[] = [];
+      
+      // Добавляем TON баланс
+      if (balances.TON) {
+        realBalances.push({
+          symbol: 'TON',
+          balance: balances.TON.balance,
+          usdValue: balances.TON.usdValue || '0.00',
+          change24h: 0, // Можно добавить получение изменения за 24ч
+          tokenInfo: TON_TOKENS.find(t => t.symbol === 'TON')!
+        });
+      }
+      
+      // Добавляем CASA баланс
+      if (balances.CASA) {
+        realBalances.push({
+          symbol: 'CASA',
+          balance: balances.CASA.balance,
+          usdValue: balances.CASA.usdValue || '0.00',
+          change24h: 0, // Можно добавить получение изменения за 24ч
+          tokenInfo: TON_TOKENS.find(t => t.symbol === 'CASA')!
+        });
+      }
 
-      const mockBalances: TokenBalance[] = [
+      setBalances(realBalances);
+    } catch (err) {
+      console.error('Error fetching balances:', err);
+      
+      // Fallback на моковые данные если API недоступен
+      console.log('Using fallback mock data');
+      const fallbackBalances: TokenBalance[] = [
         {
           symbol: 'CASA',
-          balance: '1234.56',
-          usdValue: '2469.12',
-          change24h: 5.2,
+          balance: '0',
+          usdValue: '0.00',
+          change24h: 0,
           tokenInfo: TON_TOKENS.find(t => t.symbol === 'CASA')!
         },
         {
           symbol: 'TON',
-          balance: '100.00',
-          usdValue: '150.00',
-          change24h: -2.1,
+          balance: '0',
+          usdValue: '0.00',
+          change24h: 0,
           tokenInfo: TON_TOKENS.find(t => t.symbol === 'TON')!
         }
       ];
-
-      setBalances(mockBalances);
-    } catch (err) {
-      setError(MESSAGES.NETWORK_ERROR);
-      console.error('Error fetching balances:', err);
+      
+      setBalances(fallbackBalances);
+      setError('Не удалось загрузить балансы. Проверьте подключение к интернету.');
     } finally {
       setLoading(false);
     }
@@ -130,7 +158,11 @@ export const useTonWallet = () => {
     const balance = getTokenBalance(symbol);
     if (!balance) return '0.00';
     
-    return formatAmount(balance.balance, balance.tokenInfo.decimals);
+    // Преобразуем строку баланса в число и форматируем
+    const balanceNum = parseFloat(balance.balance);
+    if (isNaN(balanceNum)) return '0.00';
+    
+    return formatAmount(balanceNum, balance.tokenInfo.decimals);
   }, [getTokenBalance]);
 
   return {
