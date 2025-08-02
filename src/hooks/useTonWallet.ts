@@ -3,7 +3,7 @@ import { useTonConnectUI } from '@tonconnect/ui-react';
 import { WalletInfo, TokenBalance } from '../types';
 import { TON_TOKENS, formatAmount } from '../utils/tonUtils';
 import { MESSAGES } from '../constants';
-import { getAllBalances, getTonBalance, getJettonBalance } from '../utils/tonApi';
+import { getAllBalances, getTonBalance, getJettonBalance, clearCache } from '../utils/tonApi';
 
 export const useTonWallet = () => {
   const [tonConnectUI] = useTonConnectUI();
@@ -165,6 +165,12 @@ export const useTonWallet = () => {
     return formatAmount(balanceNum, balance.tokenInfo.decimals);
   }, [getTokenBalance]);
 
+  // Принудительное обновление балансов (очистка кэша)
+  const refreshBalances = useCallback(async () => {
+    clearCache();
+    await fetchBalances();
+  }, [fetchBalances]);
+
   return {
     connected,
     walletInfo,
@@ -172,6 +178,7 @@ export const useTonWallet = () => {
     loading,
     error,
     fetchBalances,
+    refreshBalances,
     sendTransaction,
     getTokenBalance,
     hasSufficientBalance,

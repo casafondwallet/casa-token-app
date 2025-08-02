@@ -1,60 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useTonConnectUI } from '@tonconnect/ui-react';
+import React from 'react';
 import { Wallet, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
-
-interface TokenBalance {
-  symbol: string;
-  balance: string;
-  usdValue: string;
-  change24h: number;
-  icon: string;
-}
+import { useTonWallet } from '../hooks/useTonWallet';
 
 const BalanceCard: React.FC = () => {
-  const [tonConnectUI] = useTonConnectUI();
-  const connected = tonConnectUI.connected;
-  const account = tonConnectUI.account;
-
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchBalances = async () => {
-    if (!connected || !account) return;
-
-    setLoading(true);
-    try {
-      // Здесь будет реальный API вызов для получения балансов
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Демо данные
-      setBalances([
-        {
-          symbol: 'CASA',
-          balance: '1,250.00',
-          usdValue: '2,500.00',
-          change24h: 5.2,
-          icon: '🏠'
-        },
-        {
-          symbol: 'TON',
-          balance: '500.00',
-          usdValue: '750.00',
-          change24h: -2.1,
-          icon: '⚡'
-        }
-      ]);
-    } catch (error) {
-      console.error('Error fetching balances:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (connected) {
-      fetchBalances();
-    }
-  }, [connected, account]);
+  const {
+    connected,
+    walletInfo,
+    balances,
+    loading,
+    error,
+    refreshBalances
+  } = useTonWallet();
 
   if (!connected) {
     return (
@@ -77,13 +33,14 @@ const BalanceCard: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-white">Баланс</h2>
           <p className="text-white/70">
-            {account?.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : 'Адрес не найден'}
+            {walletInfo?.address ? `${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}` : 'Адрес не найден'}
           </p>
         </div>
         <button
-          onClick={fetchBalances}
+          onClick={refreshBalances}
           disabled={loading}
           className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors disabled:opacity-50"
+          title="Принудительное обновление (очистка кэша)"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           <span>Обновить</span>
@@ -111,7 +68,7 @@ const BalanceCard: React.FC = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="text-2xl">{token.icon}</div>
+                <div className="text-2xl">{token.tokenInfo.icon}</div>
                 <div>
                   <h3 className="text-white font-semibold">{token.symbol}</h3>
                   <p className="text-white/70 text-sm">

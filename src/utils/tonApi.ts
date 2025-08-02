@@ -3,6 +3,10 @@
 const TON_CENTER_API = 'https://toncenter.com/api/v2';
 const TON_API_KEY = process.env.REACT_APP_TON_API_KEY || '';
 
+// Кэш для балансов (5 минут)
+const BALANCE_CACHE = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+
 export interface TonBalance {
   balance: string;
   usdValue?: string;
@@ -18,12 +22,34 @@ export interface JettonBalance {
   usdValue?: string;
 }
 
-// Получение баланса TON
+// Функция для получения кэшированных данных
+const getCachedData = (key: string) => {
+  const cached = BALANCE_CACHE.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  return null;
+};
+
+// Функция для сохранения данных в кэш
+const setCachedData = (key: string, data: any) => {
+  BALANCE_CACHE.set(key, { data, timestamp: Date.now() });
+};
+
+// Получение баланса TON с кэшированием
 export const getTonBalance = async (address: string): Promise<TonBalance> => {
+  const cacheKey = `ton_balance_${address}`;
+  const cached = getCachedData(cacheKey);
+  
+  if (cached) {
+    return cached;
+  }
+
   try {
     const response = await fetch(`${TON_CENTER_API}/getAddressBalance?address=${address}`, {
       headers: {
-        'X-API-Key': TON_API_KEY
+        'X-API-Key': TON_API_KEY,
+        'User-Agent': 'CASA-Token-Wallet/1.0'
       }
     });
     
@@ -33,25 +59,41 @@ export const getTonBalance = async (address: string): Promise<TonBalance> => {
       throw new Error(data.error || 'Failed to fetch TON balance');
     }
     
-    return {
+    const result = {
       balance: data.result,
       usdValue: await getTonUsdValue(data.result)
     };
+    
+    setCachedData(cacheKey, result);
+    return result;
   } catch (error) {
     console.error('Error fetching TON balance:', error);
-    throw error;
+    
+    // Fallback - возвращаем нулевой баланс
+    return {
+      balance: '0',
+      usdValue: '0.00'
+    };
   }
 };
 
-// Получение баланса Jetton токена
+// Получение баланса Jetton токена с кэшированием
 export const getJettonBalance = async (
   walletAddress: string, 
   jettonAddress: string
 ): Promise<JettonBalance> => {
+  const cacheKey = `jetton_balance_${walletAddress}_${jettonAddress}`;
+  const cached = getCachedData(cacheKey);
+  
+  if (cached) {
+    return cached;
+  }
+
   try {
     const response = await fetch(`${TON_CENTER_API}/getJettonWalletData?address=${walletAddress}&jetton_address=${jettonAddress}`, {
       headers: {
-        'X-API-Key': TON_API_KEY
+        'X-API-Key': TON_API_KEY,
+        'User-Agent': 'CASA-Token-Wallet/1.0'
       }
     });
     
@@ -61,32 +103,58 @@ export const getJettonBalance = async (
       throw new Error(data.error || 'Failed to fetch Jetton balance');
     }
     
-    return {
+    const result = {
       balance: data.result.balance,
       metadata: data.result.metadata,
       usdValue: await getJettonUsdValue(data.result.balance, jettonAddress)
     };
+    
+    setCachedData(cacheKey, result);
+    return result;
   } catch (error) {
     console.error('Error fetching Jetton balance:', error);
-    throw error;
+    
+    // Fallback - возвращаем нулевой баланс
+    return {
+      balance: '0',
+      metadata: {
+        name: 'CASA',
+        symbol: 'CASA',
+        decimals: 9
+      },
+      usdValue: '0.00'
+    };
   }
 };
 
-// Получение USD стоимости TON
+// Кэш для курсов валют (10 минут)
+const PRICE_CACHE = new Map<string, { data: any; timestamp: number }>();
+const PRICE_CACHE_DURATION = 10 * 60 * 1000; // 10 минут
+
+// Получение USD стоимости TON с кэшированием
 export const getTonUsdValue = async (balance: string): Promise<string> => {
-  try {
-    // Получаем курс TON к USD
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd');
-    const data = await response.json();
-    
-    const tonPrice = data['the-open-network']?.usd || 0;
-    const balanceInTon = parseFloat(balance) / Math.pow(10, 9); // TON имеет 9 знаков после запятой
-    
-    return (balanceInTon * tonPrice).toFixed(2);
-  } catch (error) {
-    console.error('Error fetching TON USD value:', error);
-    return '0.00';
+  const cacheKey = 'ton_price';
+  const cached = PRICE_CACHE.get(cacheKey);
+  
+  let tonPrice = 0;
+  
+  if (cached && Date.now() - cached.timestamp < PRICE_CACHE_DURATION) {
+    tonPrice = cached.data;
+  } else {
+    try {
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd');
+      const data = await response.json();
+      
+      tonPrice = data['the-open-network']?.usd || 0;
+      PRICE_CACHE.set(cacheKey, { data: tonPrice, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Error fetching TON USD value:', error);
+      tonPrice = 1.5; // Fallback цена
+    }
   }
+  
+  const balanceInTon = parseFloat(balance) / Math.pow(10, 9);
+  return (balanceInTon * tonPrice).toFixed(2);
 };
 
 // Получение USD стоимости Jetton токена
@@ -104,17 +172,22 @@ export const getJettonUsdValue = async (balance: string, jettonAddress: string):
   }
 };
 
-// Получение всех балансов для кошелька
+// Получение всех балансов для кошелька с оптимизацией
 export const getAllBalances = async (walletAddress: string) => {
   try {
-    const [tonBalance, casaBalance] = await Promise.all([
+    // Используем Promise.allSettled для обработки ошибок отдельных запросов
+    const [tonResult, casaResult] = await Promise.allSettled([
       getTonBalance(walletAddress),
       getJettonBalance(walletAddress, 'EQBWK_VVEBJWiIQIIXOckUVw0HdF24buJiNiiR0dUHEe2xs4')
     ]);
     
     return {
-      TON: tonBalance,
-      CASA: casaBalance
+      TON: tonResult.status === 'fulfilled' ? tonResult.value : { balance: '0', usdValue: '0.00' },
+      CASA: casaResult.status === 'fulfilled' ? casaResult.value : { 
+        balance: '0', 
+        metadata: { name: 'CASA', symbol: 'CASA', decimals: 9 },
+        usdValue: '0.00' 
+      }
     };
   } catch (error) {
     console.error('Error fetching all balances:', error);
@@ -138,4 +211,10 @@ export const getSwapRate = async (fromToken: string, toToken: string): Promise<n
     console.error('Error fetching swap rate:', error);
     return 1.0;
   }
+};
+
+// Очистка кэша
+export const clearCache = () => {
+  BALANCE_CACHE.clear();
+  PRICE_CACHE.clear();
 }; 
