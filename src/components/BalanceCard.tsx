@@ -1,6 +1,7 @@
 import React from 'react';
-import { Wallet, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, RefreshCw, TrendingUp, TrendingDown, Shield, AlertCircle } from 'lucide-react';
 import { useTonWallet } from '../hooks/useTonWallet';
+import { getApiInfo } from '../utils/tonApi';
 
 const BalanceCard: React.FC = () => {
   const {
@@ -11,6 +12,8 @@ const BalanceCard: React.FC = () => {
     error,
     refreshBalances
   } = useTonWallet();
+
+  const apiInfo = getApiInfo();
 
   if (!connected) {
     return (
@@ -36,15 +39,32 @@ const BalanceCard: React.FC = () => {
             {walletInfo?.address ? `${walletInfo.address.slice(0, 6)}...${walletInfo.address.slice(-4)}` : 'Адрес не найден'}
           </p>
         </div>
-        <button
-          onClick={refreshBalances}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors disabled:opacity-50"
-          title="Принудительное обновление (очистка кэша)"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          <span>Обновить</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* API Status Indicator */}
+          <div className="flex items-center space-x-1 px-2 py-1 rounded text-xs">
+            {apiInfo.hasKey ? (
+              <div className="flex items-center space-x-1 text-green-400">
+                <Shield className="h-3 w-3" />
+                <span>API Key</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1 text-yellow-400">
+                <AlertCircle className="h-3 w-3" />
+                <span>No Key</span>
+              </div>
+            )}
+          </div>
+          
+          <button
+            onClick={refreshBalances}
+            disabled={loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white transition-colors disabled:opacity-50"
+            title="Принудительное обновление (очистка кэша)"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Обновить</span>
+          </button>
+        </div>
       </div>
 
       {/* Total Balance */}

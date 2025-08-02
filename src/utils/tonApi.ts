@@ -3,6 +3,20 @@
 const TON_CENTER_API = 'https://toncenter.com/api/v2';
 const TON_API_KEY = process.env.REACT_APP_TON_API_KEY || '';
 
+// Проверка наличия API ключа
+export const hasApiKey = (): boolean => {
+  return !!TON_API_KEY;
+};
+
+// Получение информации о лимитах API
+export const getApiInfo = () => {
+  return {
+    hasKey: hasApiKey(),
+    rateLimit: hasApiKey() ? '1000 requests/minute' : '10 requests/minute',
+    priority: hasApiKey() ? 'High' : 'Low'
+  };
+};
+
 // Кэш для балансов (5 минут)
 const BALANCE_CACHE = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 минут
