@@ -60,7 +60,7 @@ const manifestUrl = 'https://your-domain.com/tonconnect-manifest.json';
 
 ```env
 REACT_APP_TON_NETWORK=mainnet
-REACT_APP_CASA_TOKEN_ADDRESS=EQD...
+REACT_APP_CASA_TOKEN_ADDRESS=EQBWK_VVEBJWiIQIIXOckUVw0HdF24buJiNiiR0dUHEe2xs4
 REACT_APP_API_URL=https://your-api.com
 ```
 

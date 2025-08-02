@@ -19,7 +19,7 @@ export const TON_TOKENS: TokenInfo[] = [
   {
     symbol: 'CASA',
     name: 'CASA Token',
-    address: 'EQD...', // Замените на реальный адрес CASA токена
+    address: 'EQBWK_VVEBJWiIQIIXOckUVw0HdF24buJiNiiR0dUHEe2xs4',
     decimals: 9,
     icon: '🏠'
   }
