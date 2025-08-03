@@ -104,25 +104,48 @@ export const getJettonBalance = async (
   }
 
   try {
-    const response = await fetch(`${TON_CENTER_API}/getJettonWalletData?address=${walletAddress}&jetton_address=${jettonAddress}`, {
+    // Сначала получаем адрес Jetton кошелька
+    const walletResponse = await fetch(`${TON_CENTER_API}/getJettonWalletData?address=${walletAddress}&jetton_address=${jettonAddress}`, {
       headers: {
         'X-API-Key': TON_API_KEY,
         'User-Agent': 'CASA-Token-Wallet/1.0'
       }
     });
     
-    const data = await response.json();
+    const walletData = await walletResponse.json();
+    console.log('Jetton wallet data:', walletData);
     
-    if (!data.ok) {
-      throw new Error(data.error || 'Failed to fetch Jetton balance');
+    if (!walletData.ok) {
+      throw new Error(walletData.error || 'Failed to fetch Jetton wallet data');
+    }
+    
+    // Теперь получаем баланс Jetton кошелька
+    const jettonWalletAddress = walletData.result.address;
+    const balanceResponse = await fetch(`${TON_CENTER_API}/getAddressBalance?address=${jettonWalletAddress}`, {
+      headers: {
+        'X-API-Key': TON_API_KEY,
+        'User-Agent': 'CASA-Token-Wallet/1.0'
+      }
+    });
+    
+    const balanceData = await balanceResponse.json();
+    console.log('Jetton balance data:', balanceData);
+    
+    if (!balanceData.ok) {
+      throw new Error(balanceData.error || 'Failed to fetch Jetton balance');
     }
     
     const result = {
-      balance: data.result.balance,
-      metadata: data.result.metadata,
-      usdValue: await getJettonUsdValue(data.result.balance, jettonAddress)
+      balance: balanceData.result,
+      metadata: {
+        name: 'CASA',
+        symbol: 'CASA',
+        decimals: 9
+      },
+      usdValue: await getJettonUsdValue(balanceData.result, jettonAddress)
     };
     
+    console.log('Final Jetton result:', result);
     setCachedData(cacheKey, result);
     return result;
   } catch (error) {
@@ -218,13 +241,18 @@ export const getJettonUsdValue = async (balance: string, jettonAddress: string):
 // Получение всех балансов для кошелька с оптимизацией
 export const getAllBalances = async (walletAddress: string) => {
   try {
+    console.log('Fetching balances for wallet:', walletAddress);
+    
     // Используем Promise.allSettled для обработки ошибок отдельных запросов
     const [tonResult, casaResult] = await Promise.allSettled([
       getTonBalance(walletAddress),
       getJettonBalance(walletAddress, 'EQBWK_VVEBJWiIQIIXOckUVw0HdF24buJiNiiR0dUHEe2xs4')
     ]);
     
-    return {
+    console.log('TON result:', tonResult);
+    console.log('CASA result:', casaResult);
+    
+    const result = {
       TON: tonResult.status === 'fulfilled' ? tonResult.value : { balance: '0', usdValue: '0.00' },
       CASA: casaResult.status === 'fulfilled' ? casaResult.value : { 
         balance: '0', 
@@ -232,6 +260,9 @@ export const getAllBalances = async (walletAddress: string) => {
         usdValue: '0.00' 
       }
     };
+    
+    console.log('Final balances result:', result);
+    return result;
   } catch (error) {
     console.error('Error fetching all balances:', error);
     throw error;
