@@ -171,15 +171,44 @@ export const getTonUsdValue = async (balance: string): Promise<string> => {
   return (balanceInTon * tonPrice).toFixed(2);
 };
 
+// Получение курса CASA токена
+export const getCasaPrice = async (): Promise<number> => {
+  const cacheKey = 'casa_price';
+  const cached = PRICE_CACHE.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < PRICE_CACHE_DURATION) {
+    return cached.data;
+  }
+  
+  try {
+    // Пытаемся получить курс через различные API
+    // 1. Через TON Center API (если доступен)
+    // 2. Через DEX API (DeDust, Ston.fi)
+    // 3. Fallback на фиксированный курс
+    
+    // Пока используем фиксированный курс, но можно интегрировать с реальными API
+    const casaPrice = 1.85; // Примерный курс CASA/USD
+    
+    // Кэшируем результат
+    PRICE_CACHE.set(cacheKey, { data: casaPrice, timestamp: Date.now() });
+    
+    return casaPrice;
+  } catch (error) {
+    console.error('Error fetching CASA price:', error);
+    return 1.85; // Fallback курс
+  }
+};
+
 // Получение USD стоимости Jetton токена
 export const getJettonUsdValue = async (balance: string, jettonAddress: string): Promise<string> => {
   try {
-    // Для CASA токена используем фиксированный курс или получаем из DEX
-    // Пока используем примерный курс 1 CASA = $2.00
-    const casaPrice = 2.00;
-    const balanceInCasa = parseFloat(balance) / Math.pow(10, 9);
+    // Для CASA токена используем функцию получения курса
+    const casaPrice = await getCasaPrice();
     
-    return (balanceInCasa * casaPrice).toFixed(2);
+    const balanceInCasa = parseFloat(balance) / Math.pow(10, 9);
+    const usdValue = balanceInCasa * casaPrice;
+    
+    return usdValue.toFixed(2);
   } catch (error) {
     console.error('Error fetching Jetton USD value:', error);
     return '0.00';
@@ -231,4 +260,25 @@ export const getSwapRate = async (fromToken: string, toToken: string): Promise<n
 export const clearCache = () => {
   BALANCE_CACHE.clear();
   PRICE_CACHE.clear();
+};
+
+// Получение информации о курсах валют
+export const getPriceInfo = async () => {
+  try {
+    const [tonPrice, casaPrice] = await Promise.allSettled([
+      getTonUsdValue('1000000000'), // 1 TON в нанотонах
+      getCasaPrice()
+    ]);
+    
+    return {
+      TON: tonPrice.status === 'fulfilled' ? parseFloat(tonPrice.value) : 1.5,
+      CASA: casaPrice.status === 'fulfilled' ? casaPrice.value : 1.85
+    };
+  } catch (error) {
+    console.error('Error fetching price info:', error);
+    return {
+      TON: 1.5,
+      CASA: 1.85
+    };
+  }
 }; 

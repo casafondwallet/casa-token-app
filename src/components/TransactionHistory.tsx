@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { BarChart3, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 
@@ -23,52 +23,9 @@ const TransactionHistory: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'send' | 'receive' | 'swap'>('all');
 
-  const mockTransactions: Transaction[] = [
-    {
-      id: '1',
-      type: 'send',
-      token: 'CASA',
-      amount: '100.00',
-      usdValue: '200.00',
-      address: 'EQD...abc123',
-      timestamp: '2024-01-15T10:30:00Z',
-      status: 'completed',
-      hash: '0x1234567890abcdef'
-    },
-    {
-      id: '2',
-      type: 'receive',
-      token: 'TON',
-      amount: '50.00',
-      usdValue: '75.00',
-      address: 'EQD...def456',
-      timestamp: '2024-01-14T15:45:00Z',
-      status: 'completed',
-      hash: '0xabcdef1234567890'
-    },
-    {
-      id: '3',
-      type: 'swap',
-      token: 'CASA → TON',
-      amount: '25.00',
-      usdValue: '50.00',
-      address: 'DEX Exchange',
-      timestamp: '2024-01-13T09:20:00Z',
-      status: 'completed'
-    },
-    {
-      id: '4',
-      type: 'send',
-      token: 'CASA',
-      amount: '75.50',
-      usdValue: '151.00',
-      address: 'EQD...ghi789',
-      timestamp: '2024-01-12T14:15:00Z',
-      status: 'pending'
-    }
-  ];
+  const mockTransactions: Transaction[] = useMemo(() => [], []);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!connected || !account) return;
     
     setLoading(true);
@@ -81,13 +38,13 @@ const TransactionHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [connected, account, mockTransactions]);
 
   useEffect(() => {
     if (connected) {
       fetchTransactions();
     }
-  }, [connected, account]);
+  }, [connected, account, fetchTransactions]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

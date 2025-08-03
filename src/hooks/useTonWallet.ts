@@ -3,7 +3,7 @@ import { useTonConnectUI } from '@tonconnect/ui-react';
 import { WalletInfo, TokenBalance } from '../types';
 import { TON_TOKENS, formatAmount } from '../utils/tonUtils';
 import { MESSAGES } from '../constants';
-import { getAllBalances, getTonBalance, getJettonBalance, clearCache } from '../utils/tonApi';
+import { getAllBalances, clearCache } from '../utils/tonApi';
 
 export const useTonWallet = () => {
   const [tonConnectUI] = useTonConnectUI();
@@ -41,29 +41,34 @@ export const useTonWallet = () => {
     try {
       // Получаем реальные балансы из блокчейна
       const balances = await getAllBalances(account.address);
+      console.log('Raw balances from API:', balances);
       
       const realBalances: TokenBalance[] = [];
       
       // Добавляем TON баланс
       if (balances.TON) {
-        realBalances.push({
+        const tonBalance = {
           symbol: 'TON',
           balance: balances.TON.balance,
           usdValue: balances.TON.usdValue || '0.00',
           change24h: 0, // Можно добавить получение изменения за 24ч
           tokenInfo: TON_TOKENS.find(t => t.symbol === 'TON')!
-        });
+        };
+        console.log('TON balance object:', tonBalance);
+        realBalances.push(tonBalance);
       }
       
       // Добавляем CASA баланс
       if (balances.CASA) {
-        realBalances.push({
+        const casaBalance = {
           symbol: 'CASA',
           balance: balances.CASA.balance,
           usdValue: balances.CASA.usdValue || '0.00',
           change24h: 0, // Можно добавить получение изменения за 24ч
           tokenInfo: TON_TOKENS.find(t => t.symbol === 'CASA')!
-        });
+        };
+        console.log('CASA balance object:', casaBalance);
+        realBalances.push(casaBalance);
       }
 
       setBalances(realBalances);

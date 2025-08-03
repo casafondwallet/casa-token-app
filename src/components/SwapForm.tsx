@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { RefreshCw, ArrowDown, TrendingUp, AlertCircle } from 'lucide-react';
 
@@ -37,7 +37,7 @@ const SwapForm: React.FC = () => {
     setError('');
   };
 
-  const calculateSwap = () => {
+  const calculateSwap = useCallback(() => {
     if (!swapData.fromAmount || parseFloat(swapData.fromAmount) <= 0) {
       setSwapData(prev => ({ ...prev, toAmount: '' }));
       return;
@@ -49,7 +49,7 @@ const SwapForm: React.FC = () => {
       ...prev,
       toAmount: calculatedAmount.toFixed(6)
     }));
-  };
+  }, [swapData.fromAmount, swapRate.rate, swapRate.fee]);
 
   const handleSwap = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +102,7 @@ const SwapForm: React.FC = () => {
 
   React.useEffect(() => {
     calculateSwap();
-  }, [swapData.fromAmount, swapRate]);
+  }, [swapData.fromAmount, swapRate, calculateSwap]);
 
   if (!connected) {
     return (

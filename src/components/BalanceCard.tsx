@@ -9,7 +9,6 @@ const BalanceCard: React.FC = () => {
     walletInfo,
     balances,
     loading,
-    error,
     refreshBalances
   } = useTonWallet();
 
@@ -71,10 +70,33 @@ const BalanceCard: React.FC = () => {
       <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20">
         <div className="text-center">
           <p className="text-white/70 text-sm mb-1">Общий баланс</p>
-          <p className="text-3xl font-bold text-white mb-2">$3,250.00</p>
+          <p className="text-3xl font-bold text-white mb-2">
+            {loading ? (
+              <span className="animate-pulse">Загрузка...</span>
+            ) : (
+              `$${balances.reduce((total, token) => {
+                // Безопасное преобразование строки в число
+                const usdValue = parseFloat(token.usdValue) || 0;
+                console.log(`Token ${token.symbol}: usdValue="${token.usdValue}" -> parsed=${usdValue}`);
+                return total + usdValue;
+              }, 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}`
+            )}
+          </p>
           <div className="flex items-center justify-center space-x-1 text-green-400">
-            <TrendingUp className="h-4 w-4" />
-            <span className="text-sm">+3.1% за 24ч</span>
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Обновление...</span>
+              </>
+            ) : (
+              <>
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-sm">Актуально</span>
+              </>
+            )}
           </div>
         </div>
       </div>
